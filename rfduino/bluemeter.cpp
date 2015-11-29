@@ -125,17 +125,4 @@ void loop() {
     Serial.println("IDLE");
 #endif
   }
-
-  // get a cpu temperature sample
-  // degrees c (-198.00 to +260.00)
-  // degrees f (-128.00 to +127.00)
-  float temp = RFduino_temperature(CELSIUS);
-
-  // send the sample to the iPhone
-  RFduinoBLE.sendFloat(temp);
-
-  //Serial.print("T: ");
-  //Serial.print(mode);
-  //Serial.print(" ");
-  //Serial.println(temp);
 }
