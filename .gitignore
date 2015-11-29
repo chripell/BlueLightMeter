@@ -1,0 +1,6 @@
+*.o
+*~
+*.a
+out.hex
+out.elf
+out.map

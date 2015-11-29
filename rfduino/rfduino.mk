@@ -12,20 +12,24 @@ CXX=${CCPREFIX}arm-none-eabi-g++
 CC=${CCPREFIX}arm-none-eabi-gcc
 OBJCOPY=${CCPREFIX}arm-none-eabi-objcopy
 
-VPATH=${RFDUINO}/cores/arduino:${RFDUINO}/variants/RFduino:${RFDUINO}/libraries/RFduinoBLE
+VPATH=${RFDUINO}/cores/arduino:${RFDUINO}/variants/RFduino:${RFDUINO}/libraries/RFduinoBLE:${RFDUINO}/libraries/Wire
 
 CFLAGS=-g -Os -w -ffunction-sections -fdata-sections -fno-rtti -fno-exceptions \
 	-fno-builtin -mcpu=cortex-m0 -DF_CPU=16000000 -DARDUINO=10605 -mthumb \
 	-D__RFduino__ -I${RFDUINO}/cores/arduino -I${RFDUINO}/variants/RFduino \
 	-I${RFDUINO}/system/RFduino -I${RFDUINO}/system/RFduino/include \
 	-I${RFDUINO}/system/CMSIS/CMSIS/Include -Wall \
-	-I${RFDUINO}/libraries/RFduinoBLE
+	-I${RFDUINO}/libraries/RFduinoBLE \
+	-I${RFDUINO}/libraries/Wire
+ifdef DEBUG
+CFLAGS+=-DADEBUG
+endif
 CXXFLAGS=${CFLAGS}
 
 CORE_SRCS=hooks.c itoa.c Memory.c syscalls.c WInterrupts.c wiring_analog.c wiring.c \
 	wiring_digital.c wiring_shift.c main.cpp Print.cpp RingBuffer.cpp Stream.cpp \
 	Tone.cpp UARTClass.cpp wiring_pulse.cpp WMath.cpp WString.cpp variant.cpp \
-	RFduinoBLE.cpp
+	RFduinoBLE.cpp Wire.cpp
 
 CORE_OBJS=$(subst .c,.o,$(subst .cpp,.o,${CORE_SRCS}))
 
