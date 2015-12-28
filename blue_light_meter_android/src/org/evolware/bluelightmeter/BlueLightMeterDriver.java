@@ -18,13 +18,13 @@ import android.widget.Toast;
 import android.content.pm.PackageManager;
 import java.io.UnsupportedEncodingException;
 import org.evolware.bluelightmeter.BlueLightMeterData;
-import org.evolware.bluelightmeter.BlueLightMeterParameterSetter;
+import org.evolware.bluelightmeter.BlueLightMeterSetterGetter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 
-public class BlueLightMeterDriver implements BlueLightMeterParameterSetter {
+public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
     private static final String TAG = "BLMDriver";
     private static final String RFDUINO_READ = "00002221-0000-1000-8000-00805f9b34fb";
     private static final String RFDUINO_WRITE = "00002222-0000-1000-8000-00805f9b34fb";
@@ -127,6 +127,9 @@ public class BlueLightMeterDriver implements BlueLightMeterParameterSetter {
 		    Log.i(BlueLightMeterDriver.TAG, "Stopping Scan");
                     mScanning = false;
                     mBluetoothAdapter.stopLeScan(mLeScanCallback);
+		    if (mBluetoothGatt == null) {
+			setKO("NO BlueLightMeter found");
+		    }
                 }
             }, SCAN_PERIOD);
 

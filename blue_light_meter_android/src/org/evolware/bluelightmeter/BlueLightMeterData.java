@@ -6,10 +6,10 @@ import android.hardware.Sensor;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorEvent;
 import android.webkit.JavascriptInterface;
-import org.evolware.bluelightmeter.BlueLightMeterParameterSetter;
+import org.evolware.bluelightmeter.BlueLightMeterSetterGetter;
 
 public class BlueLightMeterData implements SensorEventListener {
-    private BlueLightMeterParameterSetter setter;
+    private BlueLightMeterSetterGetter setterGetter;
     private String status = "DEFAULT";
     private int mode = 0;
     public static final int MODE_UNKNOWN = 0;
@@ -39,7 +39,7 @@ public class BlueLightMeterData implements SensorEventListener {
 	    return "initializing:";
 	}
 	if (mode == MODE_BLM) {
-	    return setter.getValue();
+	    return setterGetter.getValue();
 	}
 	if (lux >= 0.0) {
 	    return "lux: " + Float.toString(lux);
@@ -60,12 +60,12 @@ public class BlueLightMeterData implements SensorEventListener {
     @JavascriptInterface
     public synchronized void setParameters(String par) {
 	if (mode == MODE_BLM) {
-	    setter.setParameters(par);
+	    setterGetter.setParameters(par);
 	}
     }
     
-    public BlueLightMeterData(BlueLightMeterParameterSetter setter, Context context) {
-	this.setter = setter;
+    public BlueLightMeterData(BlueLightMeterSetterGetter setterGetter, Context context) {
+	this.setterGetter = setterGetter;
 	mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
 	mLux = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
     }
