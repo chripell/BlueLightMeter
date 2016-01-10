@@ -1,11 +1,137 @@
+<!DOCTYPE html>
 <html>
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="bootstrap.min.css">
+  <link rel="stylesheet" href="bootstrap-theme.min.css">
+  <link rel="stylesheet" href="blm.css">
   <script src="jquery-2.1.4.min.js"></script>
+  <script src="bootstrap.min.js"></script>
   <script src="blm.js"></script>
+  </head>
   <body>
-    <p>test</p>
-    <p><div id="status-bar">status</div></p>
-    <p><div id="mode-bar">mode</div></p>
-    <p><div id="data-bar">data</div></p>
-    <p><div id="lux-bar">lux</div></p>
+    <div class="container-fluid">
+      <div class="row row-margin">
+	<div class="col-sm-6 text-center">
+	  <div class="row text-center">
+	    <div class="jumbotron"><h1><div id="result" class="big-h1">f/</div></h1></div>
+	  </div class="row row-margin">
+	  <div class="row row-margin">
+	    <div class="col-xs-6 text-center">
+	      <div class="btn-group" data-toggle="buttons">
+		<label class="btn btn-primary active" id="calc_Av">
+		  <input type="radio" name="calc_mode" class="btn btn-primary" checked="checked">Av</input>
+		</label>
+		<label class="btn btn-primary" id="calc_Tv">
+		  <input type="radio" name="calc_mode" class="btn btn-primary">Tv</input>
+		</label>
+		<label class="btn btn-primary" id="calc_ISO">
+		  <input type="radio" name="calc_mode" class="btn btn-primary">ISO</input>
+		</label>
+	      </div>
+	    </div>
+	    <div class="col-xs-6 text-center">
+	      <div class="btn-group" data-toggle="buttons">
+		<label class="btn btn-primary active" id="mode_noflash">
+		  <input type="radio" name="flash_mode" class="btn btn-primary" checked="checked">Normal</input>
+		</label>
+		<label class="btn btn-primary" id="mode_flash">
+		  <input type="radio" name="flash_mode" class="btn btn-primary">Flash</input>
+		</label>
+	      </div>
+	    </div>
+	  </div class="row row-margin">
+	  <div class="row row-margin">
+	    <div class="col-xs-6 text-center" id="iso_div">
+	      <div class="dropdown" id="iso_dropdown">
+		<label class="control-label" for="iso_button">ISO:</label>
+		<button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" id="iso_button">100
+		  <span class="caret"></span></button>
+		<ul class="dropdown-menu" id="iso_list">
+		</ul>
+	      </div>
+	    </div>
+	    <div class="col-xs-6 text-center" id="Tv_div">
+	      <div class="dropdown">
+		<label class="control-label" for="Tv_button">Tv:</label>
+		<button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" id="Tv_button">1
+		  <span class="caret"></span></button>
+		<ul class="dropdown-menu" id="tv_list">
+		</ul>
+	      </div>
+	    </div>
+	    <div class="col-xs-6 text-center" id="Av_div">
+	      <div class="dropdown">
+		<label class="control-label" for="Av_button">Av:</label>
+		<button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" id="Av_button">1
+		  <span class="caret"></span></button>
+		<ul class="dropdown-menu" id="av_list">
+		</ul>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+	<div class="col-sm-6">
+	  <div class="row row-margin">
+	    <div class="col-xs-6 text-center" id="cur_lux">
+	      Lux: 0.0
+	    </div>
+	    <div class="col-xs-6 text-center" id="cur_ev">
+	      EV: 0.0
+	    </div>
+	  </div>
+	  <div class="row row-margin">
+	    <div class="col-xs-6 text-center" id="max_lux">
+	      Max Lux: 0.0
+	    </div>
+	    <div class="col-xs-6 text-center" id="max_ev">
+	      Max EV: 0.0
+	    </div>
+	  </div>
+	  <div class="row row-margin">
+	    <div class="col-xs-12 text-center">
+	      <div class="btn-group" data-toggle="buttons">
+		<label class="btn btn-primary active" id="profile_manual">
+		  <input type="radio" name="blm_mode" class="btn btn-primary" checked="checked">Manual</input>
+		</label>
+		<label class="btn btn-primary" id="profile_all">
+		  <input type="radio" name="blm_mode" class="btn btn-primary">All Vals</input>
+		</label>
+		<label class="btn btn-primary" id="profile_fast">
+		  <input type="radio" name="blm_mode" class="btn btn-primary">Fast Mode</input>
+		</label>
+		<label class="btn btn-primary" id="profile_logainl">
+		  <input type="radio" name="blm_mode" class="btn btn-primary">Lo Gain</input>
+		</label>
+	      </div>
+	    </div>
+	  </div>
+	  <div class="row row-margin">
+	    <div class="col-xs-4 text-center">
+	      <div class="dropdown">
+		<button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" id="mode_button">402ms
+		  <span class="caret"></span></button>
+		<ul class="dropdown-menu"  id="mode_list">
+		</ul>
+	      </div>
+	    </div>
+	    <div class="col-xs-4 text-center">
+	      <input type="number" class="form-control" id="cutom_time_ms" value="500"></input>ms
+	    </div>
+	    <div class="col-xs-4 text-center">
+	      <div class="checkbox">
+		<label><input type="checkbox" value="" id="higain_checkbox">HiGain</label>
+	      </div>
+	    </div>
+	  </div>
+	  <div class="row row-margin">
+	    <div class="col-xs-12">
+	      <div class="well" id="blm_status">Status: initializing</div>
+	    </div>
+	  </div>
+	</div>
+      </div>
+    </div>
   </body>
 </html>

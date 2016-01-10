@@ -1,0 +1,10 @@
+.row-margin{
+    margin-top: 12px;
+    margin-bottom: 12px
+}
+
+@media (max-width: 480px) {
+    .big-h1{
+	font-size: 50px;
+    }
+}

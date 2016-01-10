@@ -22,19 +22,23 @@ import org.evolware.bluelightmeter.BlueLightMeterSetterGetter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 
 public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
     private static final String TAG = "BLMDriver";
     private static final String RFDUINO_READ = "00002221-0000-1000-8000-00805f9b34fb";
     private static final String RFDUINO_WRITE = "00002222-0000-1000-8000-00805f9b34fb";
+    private static final String RFDUINO_SERVICE = "00002220-0000-1000-8000-00805f9b34fb";
 
     private BlueLightMeterData data = null;
     private BluetoothAdapter mBluetoothAdapter = null;
     private Activity mContext;
     private boolean mScanning;
     private Handler mHandler;
+    private boolean writePending = false;
     private BluetoothAdapter.LeScanCallback mLeScanCallback;
+    private BluetoothDevice device;
     private BluetoothGatt mBluetoothGatt;
     private BluetoothGattCharacteristic writeCharacteristic;
     private BluetoothGattCharacteristic readCharacteristic;
@@ -46,10 +50,6 @@ public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
 
     // Stops scanning after 10 seconds.
     private static final long SCAN_PERIOD = 10000;
-
-    // Static so it is preserved between Activities restarts because
-    // scan is time consuming.
-    private static BluetoothDevice device;
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
@@ -82,6 +82,7 @@ public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
 			}
 			if (uuid.equals(RFDUINO_WRITE)) {
 			    Log.i(TAG, "Saving write characteristic: " + uuid);
+			    Log.i(TAG, "Service UUID is: " + c.getService().getUuid());
 			    writeCharacteristic = c;
 			}
 		    }
@@ -102,12 +103,25 @@ public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
 	    else {
 		setKO("onCharacteristicRead received: " + status);
 	    }
+	    if (writePending) {
+		writePending = false;
+		if (!mBluetoothGatt.writeCharacteristic(writeCharacteristic)) {
+		    setKO("write characteristic write failed");
+		}
+	    }
         }
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
 	    Log.i(TAG, "onCharacteristicChanged received");
+        }
+	    
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt,
+					  BluetoothGattCharacteristic characteristic,
+					  int status) {
+	    Log.i(TAG, "onCharacteristicWrite received: " + status);
         }
     };
 
@@ -192,12 +206,10 @@ public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
 	String[] parts = par.split(" ");
 	byte[] val = new byte[parts.length];
 	for(int i = 0; i < parts.length; i++) {
-	    val[i] = Byte.parseByte(parts[i], 16);
+	    val[i] = (byte) Short.parseShort(parts[i], 16);
 	}
 	if (writeCharacteristic.setValue(val)) {
-	    if (!mBluetoothGatt.writeCharacteristic(writeCharacteristic)) {
-		setKO("write characteristic write failed");
-	    }
+	    writePending = true;
 	}
 	else {
 	    setKO("write characteristic set value failed");
@@ -211,7 +223,9 @@ public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
 	    stringBuilder.append("blm: ");
 	    for(byte byteChar : val)
 		stringBuilder.append(String.format("%02X ", byteChar));
-	    mBluetoothGatt.readCharacteristic(readCharacteristic);
+	    if (mBluetoothGatt != null) {
+		mBluetoothGatt.readCharacteristic(readCharacteristic);
+	    }
 	    return stringBuilder.toString();
 	}
 	return "nodata:";
@@ -239,6 +253,8 @@ public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
 				}
 				Log.i(BlueLightMeterDriver.TAG, decoded);
 				if (getDevice() == null && decoded.contains("RFduino") && decoded.contains("BlueL")) {
+				    Log.i(TAG, "Stopping Scan because found");
+				    scanLeDevice(false);
 				    String found = "Found BLM: " + device.getAddress();
 				    Log.i(BlueLightMeterDriver.TAG, found);
 				    data.setStatus(found);

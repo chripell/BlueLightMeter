@@ -156,7 +156,7 @@ class BLMThread(Process):
       if ratio < 0.5:
           return 0.0304 * d0 - 0.062 * d0 * math.pow(ratio, 1.4)
       if ratio < 0.61:
-          lux = 0.0224 * d0 - 0.031 * d1;
+          return 0.0224 * d0 - 0.031 * d1;
       if ratio < 0.80:
           return 0.0128 * d0 - 0.0153 * d1;
       if ratio < 1.30:
@@ -396,7 +396,7 @@ class GUI:
                                       (self.calc_ev(float(avn), self.Tv) - delta_ev))
         elif self.what == 'ISO':
             evb = self.calc_ev(self.Av, self.Tv)
-            isov = pow(2.0, evb - ev) * 100.0
+            isov = math.pow(2.0, evb - ev) * 100.0
             isovn = self.find_nearer(isov, self.ISOc)
             self.goal.set_markup('<span size="38000">%s ISO</span>' % isovn)
             self.goal_ev.set_text('Ev=%.1f' %
