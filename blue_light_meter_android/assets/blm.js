@@ -57,6 +57,12 @@ function addUL(ul, data, txt) {
     });
 }
 
+function updateControls() {
+    $('#mode_button').html(modeVals[blmMode] + '<span class="caret"></span>');
+    $('#higain_checkbox').prop('checked', blmHiGain);
+    $('#cutom_time_ms').val(blmIntTime);
+}
+
 function calcMaxLux() {
     var now = Date.now();
     allLux.push([now, blmLux]);
@@ -158,6 +164,19 @@ function calcExpo() {
 }
 
 function sendConf(mode, higain, intTime) {
+    switch(mode) {
+    case 0:
+	msInterval = 14;
+	break;
+    case 1:
+	msInterval = 101;
+	break;
+    case 3:
+	msInterval = 402;
+	break;
+    default:
+	msInterval = intTime;
+    }
     if (higain) {
 	mode += 0x10;
     }
@@ -189,7 +208,7 @@ function calcProfile() {
     else {
 	var profile = profiles[blmProfile];
 	var now = (new Date).getTime();
-	while (profileCur > profile.length) {
+	while (profileCur >= profile.length) {
 	    profileCur--;
 	}
 	if (now > profileLast + 1000) {
@@ -207,6 +226,7 @@ function calcProfile() {
 	    profileCh = false;
 	    sendConf(profile[profileCur][1], profile[profileCur][0], $('#cutom_time_ms').val());
 	}
+	updateControls();
     }
 }
 
@@ -231,7 +251,7 @@ function readLux() {
 	else if (r[0] == 'nolux:') {
 	    $('#blm_status').html('Status: ERROR(' + BLM.getStatus() + ').');
 	} 
-	else if (r[0] == 'status:') {
+	else if (r[0] == 'status:' || r[0] == 'nodata:') {
 	    $('#blm_status').html('Status: ' + BLM.getStatus() + '.');
 	} 
 	else if (r[0] == 'lux:') {
@@ -264,9 +284,7 @@ function readLux() {
 		blmLux = calcLux();
 		if (!blmSynced) {
 		    blmSynced = true;
-		    $('#mode_button').html(modeVals[blmMode] + '<span class="caret"></span>');
-		    $('#higain_checkbox').prop('checked', blmHiGain);
-		    $('#cutom_time_ms').val(blmIntTime);
+		    updateControls();
 		}
 	    }
 	}
@@ -278,12 +296,22 @@ function readLux() {
 	}
     }
     calcMaxLux();
-    medEV = Math.log2(medLux / 2.5);
-    maxEV = Math.log2(maxLux / 2.5);
-    $('#cur_lux').text(medLux.toFixed(2));
-    $('#max_lux').text(maxLux.toFixed(2));
-    $('#cur_ev').text(medEV.toFixed(1));
-    $('#max_ev').text(maxEV.toFixed(1));
+    $('#cur_lux').text('Lux: ' + medLux.toFixed(2));
+    $('#max_lux').text('MaxLux: ' + maxLux.toFixed(2));
+    if (medLux > 0.0) {
+	medEV = Math.log2(medLux / 2.5);
+	$('#cur_ev').text('EV: ' + medEV.toFixed(1));
+    }
+    else {
+	$('#cur_ev').text('EV: N/A');
+    }
+    if (maxLux > 0.0) {
+	maxEV = Math.log2(maxLux / 2.5);
+	$('#max_ev').text('MaxEV: ' + maxEV.toFixed(1));
+    }
+    else {
+	$('#max_ev').text('MaxEV: N/A');
+    }
     calcExpo();
     if (blmSynced) {
 	calcProfile();
@@ -291,7 +319,7 @@ function readLux() {
 	if (!mockBLM) {
 	    lux = BLM.getLux();
 	}
-	$('#blm_status').html('Debug: ch:' + blmCH0 + ',' + blmCH0 + ' par:' + blmMode +
+	$('#blm_status').html('Debug: ch:' + blmCH0 + ',' + blmCH1 + ' par:' + blmMode +
 			      ',' + blmHiGain + ',' + blmIntTime + ' lux:' + lux);
     }
     setTimeout(readLux, msInterval);

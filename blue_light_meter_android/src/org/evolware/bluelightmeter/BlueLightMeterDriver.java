@@ -138,9 +138,8 @@ public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-		    Log.i(BlueLightMeterDriver.TAG, "Stopping Scan");
-                    mScanning = false;
-                    mBluetoothAdapter.stopLeScan(mLeScanCallback);
+		    Log.i(BlueLightMeterDriver.TAG, "Scan Timeout");
+		    scanLeDevice(false);
 		    if (mBluetoothGatt == null) {
 			setKO("NO BlueLightMeter found");
 		    }
@@ -217,6 +216,8 @@ public class BlueLightMeterDriver implements BlueLightMeterSetterGetter {
     }
 
     public String getValue() {
+	if (readCharacteristic == null)
+	    return "nodata:";
 	byte[] val = readCharacteristic.getValue();
 	if (val != null && val.length > 0) {
 	    final StringBuilder stringBuilder = new StringBuilder(val.length + 1);
