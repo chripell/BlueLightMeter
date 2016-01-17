@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BlueLightMeterActivity</string>
+    <string name="app_name">BlueLightMeter</string>
     <string name="ble_not_supported">This app requires BlueTooth LE capable device</string>
     <string name="ble_not_enabled">This app requires BlueTooth LE, please enable it</string>
 </resources>
