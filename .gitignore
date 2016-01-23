@@ -8,3 +8,5 @@ README.html
 android_client/bin
 android_client/gen
 buspirate_client/tester
+android_client/assets/jquery-2.1.4.min.js
+android_client/assets/bootstrap.min.js

@@ -94,7 +94,23 @@ RFDuino. The data gathered are exported, through the data-model class
 BlueLightMeterData, as BLM to the WebView. BlueLightMeterData also
 exposes methods for setting the sensor parameters.
 
+_IMPORTANT:_ I cannot include code code copyrighted by a third
+party. You need to add in android_client/assets:
 
+* [jquery-2.1.4.min.js](http://code.jquery.com/jquery-2.1.4.min.js). If
+  you install a later version you have to change blm.html as well.
+  
+* A customized Twitter Bootstrap for handling a responsive layout for
+  screen rotation. Yo can
+  [download the customization](http://getbootstrap.com/customize/?id=7ec6a072d729e9efc692)
+  but a copy of the customize.json is available in the BlueLightMeter
+  repository. Feel free to contact me if you have any problems.
+  
+
+### Contacts
+
+Feel free to drop me a line
+[Christian Pellegrin](mailto:chripell@gmail.com).
 
 
 
