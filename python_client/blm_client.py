@@ -1,5 +1,19 @@
 #!/usr/bin/env python2
 
+# Copyright 2016 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Bluetooth (BLM)
 import dbus
 import argparse
@@ -111,7 +125,7 @@ class BLM:
             mode += 0x10
         int_time = conf.get('int_time', 0)
         self.gatt_write_.WriteValue([mode, int_time % 256, int_time // 256])
-        
+
 
 class BLMThread(Process):
 
@@ -206,7 +220,7 @@ class BLMThread(Process):
   def run(self):
     blm = BLM()
     while True:
-        
+
         state = blm.read()
         self.ch0 = state['ch0']
         self.ch1 = state['ch1']
@@ -244,7 +258,7 @@ class BLMThread(Process):
                 self.profile = cmd.get('profile', 'manual')
                 if self.profile == 'manual':
                     blm.write(cmd)
-                    
+
     blm.close()
 
 
@@ -265,7 +279,7 @@ class GUI:
             self.need_to_set = False
         except:
             self.need_to_set = True
-        
+
     def destroy(self, widget, data=None):
         gtk.main_quit()
 
@@ -294,7 +308,7 @@ class GUI:
                 but.set_active(True)
             but.connect('toggled', self.setter, what, setto)
             c.pack_start(but)
-            
+
     def process_lux(self, queue):
         if self.need_to_set:
             self.setter(None, None, None)
@@ -401,7 +415,7 @@ class GUI:
             self.goal.set_markup('<span size="38000">%s ISO</span>' % isovn)
             self.goal_ev.set_text('Ev=%.1f' %
                                   (evb + math.log(float(isovn) / 100.0, 2.0)))
-        
+
     def __init__(self, cmds, lux):
         self.first_data = True
         self.need_to_set = False
@@ -414,7 +428,7 @@ class GUI:
             'int_time': 500}
         self.ev = 1.0
         self.ev_max = 1.0
-        
+
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.connect('destroy', self.destroy)
         self.window.set_title('BlueLightMeter')
@@ -432,7 +446,7 @@ class GUI:
         self.max_ev = self.new_val('EV:', max)
         self.debug = gtk.Label('Debug Info')
         vals.pack_start(self.debug)
-        
+
         ctrl = gtk.HBox()
         frame = gtk.Frame()
         frame.add(ctrl)
@@ -463,24 +477,24 @@ class GUI:
         frame = gtk.Frame()
         vals.pack_start(frame)
         frame.add(calc)
-        
+
         calc_inputs = gtk.HBox()
         calc.pack_start(calc_inputs, expand=True)
         self.create_list(self.AVc, 'Av', calc_inputs)
         self.create_list(self.TVc, 'Tv', calc_inputs)
         self.create_list(self.ISOc, 'ISO', calc_inputs)
-        
+
         calc_outputs = gtk.HBox()
         calc.pack_start(calc_outputs, expand=False)
-        
+
         which = gtk.VBox()
         calc_outputs.pack_start(which)
         which.pack_start(gtk.Label('Calculate:'))
         self.which = 'Normal'
-        self.which_base = None        
+        self.which_base = None
         self.create_obj('which', 'Normal', which)
         self.create_obj('which', 'Flash', which)
-        
+
         what = gtk.VBox()
         calc_outputs.pack_start(what)
         self.what = 'Tv'
@@ -488,7 +502,7 @@ class GUI:
         self.create_obj('what', 'Tv', what)
         self.create_obj('what', 'Av', what)
         self.create_obj('what', 'ISO', what)
-        
+
         goals = gtk.VBox()
         calc_outputs.pack_start(goals)
         self.goal = gtk.Label('<span size="38000">???</span>')

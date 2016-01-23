@@ -5,3 +5,6 @@ out.hex
 out.elf
 out.map
 README.html
+android_client/bin
+android_client/gen
+buspirate_client/tester
