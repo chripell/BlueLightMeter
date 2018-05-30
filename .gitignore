@@ -1,6 +1,9 @@
+*.so
+__pycache__
 *.o
 *~
 *.a
+depend
 out.hex
 out.elf
 out.map

@@ -328,3 +328,30 @@ void i2c_cmd_recv(struct i2c_s *i2c, int addr, unsigned char cmd,
   buspirate_aux(bp, I2C_SEND_NACK);
   buspirate_aux(bp, I2C_STOP_BIT);
 }
+
+void i2c_recv(struct i2c_s *i2c, int addr,
+		  unsigned char *data, int n) {
+  struct buspirate_s *bp = (struct buspirate_s *) i2c;
+  unsigned char abuf = (addr << 1) | 1;
+  int i;
+
+  bp->err = 0;
+  buspirate_aux(bp, I2C_START_BIT);
+  buspirate_bulk(bp, &abuf, NULL, 0);
+  for (i = 0; i < n; i++) {
+    data[i] = buspirate_aux(bp, I2C_READ_BYTE);
+    if (i < n - 1)
+      buspirate_aux(bp, I2C_SEND_ACK);
+  }
+  buspirate_aux(bp, I2C_SEND_NACK);
+  buspirate_aux(bp, I2C_STOP_BIT);
+}
+
+void i2c_pin(struct i2c_s *i2c, int aux, int cs) {
+  struct buspirate_s *bp = (struct buspirate_s *) i2c;
+
+  buspirate_cfg_pins(bp, BUSPIRATE_PINCFG_POWER|
+		     BUSPIRATE_PINCFG_PULLUPS|
+		     (aux ? BUSPIRATE_PINCFG_AUX : 0)|
+		     (cs ? BUSPIRATE_PINCFG_CS: 0));
+}

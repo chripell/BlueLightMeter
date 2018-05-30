@@ -6,14 +6,18 @@ CFLAGS=-Wall -g
 
 LDFLAGS=-lm
 
-all: tester depend
+all: depend tester libbuspirate.so
 
 tester: ${OBJS}
 	${CC} $(LDFLAGS) -o $@ $^
 
+libbuspirate.so: buspirate.c
+	${CC} $(LDFLAGS)  -fPIC -c $^
+	${LD} -shared  -o $@ buspirate.o
+
 .PHONY: clean
 clean:
-	rm -f *~ *.o tester depend
+	rm -f *~ *.o tester depend *.so
 
 depend:
 	$(CC) -M ${SRCS} > depend
