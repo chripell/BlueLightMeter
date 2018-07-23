@@ -3,6 +3,7 @@
 import buspirate as bp
 from time import sleep
 
+
 class TCS34725:
 
     def __init__(self):
@@ -12,14 +13,14 @@ class TCS34725:
 
     def light(self, on: int):
         if on != 0:
-            on =1
+            on = 1
         self.i2c.set_pin(on, on)
 
     def write_reg(self, reg: int, val: int):
         self.i2c.send(self.addr, [0xa0 | reg, val])
 
     def read_reg(self, reg: int, n: int):
-        return self.i2c.cmd_recv(0x29, 0xa0 | reg, n)
+        return self.i2c.cmd_recv(self.addr, 0xa0 | reg, n)
 
     def power_on(self):
         self.write_reg(0, 1)
