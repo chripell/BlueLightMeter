@@ -2,6 +2,7 @@
 
 import buspirate as bp
 import struct
+import time
 
 
 class AS726x:
@@ -20,12 +21,18 @@ class AS726x:
     READ_REG = 0x02
     TX_VALID = 0x02
     RX_VALID = 0x01
+    DEBUG = True
 
     def __init__(self, gain: int):
         self.addr = self.ADDR
-        self.i2c = bp.I2C("/dev/ttyUSB0", bp.I2C_SPEED_50KHZ)
+        self.i2c = bp.I2C("/dev/ttyUSB0", bp.I2C_SPEED_100KHZ)
+        # Reset must be wired to Buspirate CS
+        self.i2c.set_pin(0, 0)
+        time.sleep(1)
+        self.i2c.set_pin(1, 1)
+        time.sleep(1)
         self.ver = self.read_reg(self.HW_VERSION)
-        if (self._ver != self.SENSORTYPE_AS7262 and
+        if (self.ver != self.SENSORTYPE_AS7262 and
            self.ver != self.SENSORTYPE_AS7263):
             raise IOError("Cannot communicate")
         self.set_bulb_current(0b00)
@@ -36,9 +43,14 @@ class AS726x:
         self.set_mode(3)
 
     def read_reg_(self, reg: int):
-        return self.i2c.cmd_recv(self.addr, reg, 1)
+        r = self.i2c.cmd_recv(self.addr, reg, 1)[0]
+        if self.DEBUG:
+            print("RX %d=%d" % (reg, r))
+        return r
 
     def write_reg_(self, reg: int, val: int):
+        if self.DEBUG:
+            print("TX %d=%d" % (reg, val))
         self.i2c.send(self.addr, [reg, val])
 
     def read_reg(self, reg: int):
@@ -46,7 +58,7 @@ class AS726x:
         if status & self.RX_VALID:
             incoming = self.read_reg_(self.READ_REG)
         status = self.read_reg_(self.STATUS_REG)
-        while status & self.TX_VALID == 0:
+        while status & self.TX_VALID != 0:
             status = self.read_reg_(self.STATUS_REG)
         self.write_reg_(self.WRITE_REG, reg)
         status = self.read_reg_(self.STATUS_REG)
@@ -57,11 +69,11 @@ class AS726x:
 
     def write_reg(self, reg: int, val: int):
         status = self.read_reg_(self.STATUS_REG)
-        while status & self.TX_VALID == 0:
+        while status & self.TX_VALID != 0:
             status = self.read_reg_(self.STATUS_REG)
         self.write_reg_(self.WRITE_REG, reg | 0x80)
         status = self.read_reg_(self.STATUS_REG)
-        while status & self.TX_VALID == 0:
+        while status & self.TX_VALID != 0:
             status = self.read_reg_(self.STATUS_REG)
         self.write_reg_(self.WRITE_REG, val)
 
@@ -133,7 +145,7 @@ class AS726x:
         return struct.unpack(
             "h",
             struct.pack(
-                "s",
+                "ssss",
                 self.read_reg(addr + 0),
                 self.read_reg(addr + 1),
                 self.read_reg(addr + 2),
@@ -152,6 +164,7 @@ class AS726x:
         value = self.read_reg(self.CONTROL_SETUP)
         value |= (1 << 7)
         self.write_reg(self.CONTROL_SETUP, value)
+        time.sleep(1)
 
     # Mode 0: Continuous reading of VBGY (7262) / STUV (7263)
     # Mode 1: Continuous reading of GYOR (7262) / RTUX (7263)
@@ -164,3 +177,19 @@ class AS726x:
         value &= 0b11110011
         value |= (mode << 2)
         self.write_reg(self.CONTROL_SETUP, value)
+
+    def get_all_values(self):
+        return [
+            self.get_calibrated(0x14),
+            self.get_calibrated(0x18),
+            self.get_calibrated(0x1c),
+            self.get_calibrated(0x20),
+            self.get_calibrated(0x24),
+            self.get_calibrated(0x28)]
+
+
+as726x = AS726x(3)
+as726x.set_bulb(1)
+as726x.measure()
+print(as726x.get_all_values())
+as726x.set_bulb(0)
