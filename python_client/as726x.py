@@ -21,16 +21,12 @@ class AS726x:
     READ_REG = 0x02
     TX_VALID = 0x02
     RX_VALID = 0x01
-    DEBUG = True
+    DEBUG = False
 
     def __init__(self, gain: int):
         self.addr = self.ADDR
         self.i2c = bp.I2C("/dev/ttyUSB0", bp.I2C_SPEED_100KHZ)
-        # Reset must be wired to Buspirate CS
-        self.i2c.set_pin(0, 0)
-        time.sleep(1)
-        self.i2c.set_pin(1, 1)
-        time.sleep(1)
+        self.hard_reset()
         self.ver = self.read_reg(self.HW_VERSION)
         if (self.ver != self.SENSORTYPE_AS7262 and
            self.ver != self.SENSORTYPE_AS7263):
@@ -55,9 +51,9 @@ class AS726x:
 
     def read_reg(self, reg: int):
         status = self.read_reg_(self.STATUS_REG)
-        if status & self.RX_VALID:
+        while status & self.RX_VALID:
             incoming = self.read_reg_(self.READ_REG)
-        status = self.read_reg_(self.STATUS_REG)
+            status = self.read_reg_(self.STATUS_REG)
         while status & self.TX_VALID != 0:
             status = self.read_reg_(self.STATUS_REG)
         self.write_reg_(self.WRITE_REG, reg)
@@ -91,7 +87,7 @@ class AS726x:
     # 3: 100mA
     def set_bulb(self, val: int):
         value = self.read_reg(self.LED_CONTROL)
-        value &= (1 << 3)
+        value &= ~(1 << 3)
         value |= (val << 3)
         self.write_reg(self.LED_CONTROL, value)
 
@@ -109,7 +105,7 @@ class AS726x:
 
     def set_indicator(self, val: int):
         value = self.read_reg(self.LED_CONTROL)
-        value &= (1 << 0)
+        value &= ~(1 << 0)
         value |= (val << 0)
         self.write_reg(self.LED_CONTROL, value)
 
@@ -143,13 +139,13 @@ class AS726x:
 
     def get_calibrated(self, addr: int):
         return struct.unpack(
-            "h",
+            "f",
             struct.pack(
-                "ssss",
-                self.read_reg(addr + 0),
-                self.read_reg(addr + 1),
+                "BBBB",
+                self.read_reg(addr + 3),
                 self.read_reg(addr + 2),
-                self.read_reg(addr + 3)))
+                self.read_reg(addr + 1),
+                self.read_reg(addr + 0)))[0]
 
     def has_data(self):
         value = self.read_reg(self.CONTROL_SETUP)
@@ -160,10 +156,17 @@ class AS726x:
         value &= ~(1 << 1)
         self.write_reg(self.CONTROL_SETUP, value)
 
-    def reset(self):
+    def soft_reset(self):
         value = self.read_reg(self.CONTROL_SETUP)
         value |= (1 << 7)
         self.write_reg(self.CONTROL_SETUP, value)
+        time.sleep(1)
+
+    # Reset must be wired to Buspirate CS
+    def hard_reset(self):
+        self.i2c.set_pin(0, 0)
+        time.sleep(1)
+        self.i2c.set_pin(1, 1)
         time.sleep(1)
 
     # Mode 0: Continuous reading of VBGY (7262) / STUV (7263)
@@ -189,7 +192,7 @@ class AS726x:
 
 
 as726x = AS726x(3)
-as726x.set_bulb(1)
+# as726x.set_bulb(1)
 as726x.measure()
 print(as726x.get_all_values())
-as726x.set_bulb(0)
+# as726x.set_bulb(0)
