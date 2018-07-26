@@ -40,4 +40,5 @@ void i2c_send(struct i2c_s *i2c, int addr, unsigned char *data, int n);
 void i2c_cmd_recv(struct i2c_s *i2c, int addr, unsigned char cmd,
 		  unsigned char *data, int n);
 void i2c_pin(struct i2c_s *i2c, int aux, int cs);
+void i2c_fast(struct i2c_s *i2c, int fast);
 #endif

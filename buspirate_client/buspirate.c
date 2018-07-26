@@ -39,6 +39,7 @@ struct buspirate_s {
   int fd;
   struct termios old_termios;
   int debug:1;
+  int fast:1;
   unsigned char buf;
 };
 
@@ -252,6 +253,7 @@ struct i2c_s *i2c_new(char *type, int speed) {
   buspirate_cfg_pins(bp, BUSPIRATE_PINCFG_POWER|BUSPIRATE_PINCFG_PULLUPS);
   buspirate_set_speed(bp, speed);
   sleep_ms(200);
+  bp->fast = 0;
  exit_i2c_new:
   return (struct i2c_s *) bp;
 }
@@ -297,11 +299,55 @@ static void buspirate_bulk(struct buspirate_s *bp, unsigned char *pre,
   }
 }
 
+static void i2c_cmd8(struct buspirate_s *bp, int addr,
+		     unsigned char *tx_data, int m,
+		     unsigned char *rx_data, int n) {
+  unsigned char rx_buf[n + 1];
+  unsigned char tx_buf[1 + 2 + 2 + 1 + m];
+  int tx_len = 0;
+
+  if (bp->debug) {
+    printf("i2c_cmd8 %0x %d %d\n", addr, m, n);
+  }
+  tx_buf[0] = 8;
+  if (tx_data) {
+    tx_buf[1] = ((m + 1) >> 8) & 0xff;
+    tx_buf[2] = (m + 1) & 0xff;
+    memcpy(&tx_buf[6], tx_data, m);
+    tx_len = 6 + m;
+  } else {
+    tx_buf[1] = 0;
+    tx_buf[2] = 1;
+    tx_len = 6;
+  }
+  tx_buf[3] = (n >> 8) & 0xff;
+  tx_buf[4] = n & 0xff;
+  tx_buf[5] = addr;
+  if (write_n(bp, tx_buf, tx_len))
+    return;
+  if (read_n(bp, rx_buf, 1, 100))
+    return;
+  if (rx_buf[0] != 1) {
+    bp->err = ERR_NACK;
+    return;
+  }
+  if (n > 0)  {
+    if (read_n(bp, &rx_buf[1], n, 100))
+      return;
+    if (rx_data)
+      memcpy(rx_data, &rx_buf[1], n);
+  }
+}
+
 void i2c_send(struct i2c_s *i2c, int addr, unsigned char *data, int n) {
   struct buspirate_s *bp = (struct buspirate_s *) i2c;
   unsigned char abuf = (addr << 1);
 
   bp->err = 0;
+  if (bp->fast) {
+    i2c_cmd8(bp, addr << 1, data, n, NULL, 0);
+    return;
+  }
   buspirate_aux(bp, I2C_START_BIT);
   buspirate_bulk(bp, &abuf, data, n);
   buspirate_aux(bp, I2C_STOP_BIT);
@@ -315,6 +361,10 @@ void i2c_cmd_recv(struct i2c_s *i2c, int addr, unsigned char cmd,
   int i;
 
   bp->err = 0;
+  if (bp->fast) {
+    i2c_cmd8(bp, (addr << 1), &cbuf, 1, data, n);
+    return;
+  }
   buspirate_aux(bp, I2C_START_BIT);
   buspirate_bulk(bp, &abuf, &cbuf, 1);
   buspirate_aux(bp, I2C_START_BIT);
@@ -336,6 +386,10 @@ void i2c_recv(struct i2c_s *i2c, int addr,
   int i;
 
   bp->err = 0;
+  if (bp->fast) {
+    i2c_cmd8(bp, (addr << 1) | 1, NULL, 0, data, n);
+    return;
+  }
   buspirate_aux(bp, I2C_START_BIT);
   buspirate_bulk(bp, &abuf, NULL, 0);
   for (i = 0; i < n; i++) {
@@ -354,4 +408,10 @@ void i2c_pin(struct i2c_s *i2c, int aux, int cs) {
 		     BUSPIRATE_PINCFG_PULLUPS|
 		     (aux ? BUSPIRATE_PINCFG_AUX : 0)|
 		     (cs ? BUSPIRATE_PINCFG_CS: 0));
+}
+
+void i2c_fast(struct i2c_s *i2c, int fast) {
+  struct buspirate_s *bp = (struct buspirate_s *) i2c;
+
+  bp->fast = fast > 0;
 }

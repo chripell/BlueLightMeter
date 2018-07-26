@@ -24,6 +24,7 @@ lib.i2c_send.argtypes = [ctypes.c_void_p, ctypes.c_int,
 lib.i2c_recv.argtypes = [ctypes.c_void_p, ctypes.c_int,
                          ctypes.POINTER(ctypes.c_ubyte), ctypes.c_int]
 lib.i2c_pin.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+lib.i2c_fast.argtypes = [ctypes.c_void_p, ctypes.c_int]
 
 
 class I2C:
@@ -50,3 +51,6 @@ class I2C:
 
     def set_pin(self, aux: int, cs: int):
         lib.i2c_pin(self.b, aux, cs)
+
+    def set_fast(self, fast: int):
+        lib.i2c_fast(self.b, fast)
