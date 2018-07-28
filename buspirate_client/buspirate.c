@@ -253,7 +253,7 @@ struct i2c_s *i2c_new(char *type, int speed) {
   buspirate_cfg_pins(bp, BUSPIRATE_PINCFG_POWER|BUSPIRATE_PINCFG_PULLUPS);
   buspirate_set_speed(bp, speed);
   sleep_ms(200);
-  bp->fast = 0;
+  bp->fast = 1;
  exit_i2c_new:
   return (struct i2c_s *) bp;
 }

@@ -25,7 +25,7 @@ class AS726x:
 
     def __init__(self, gain: int):
         self.addr = self.ADDR
-        self.i2c = bp.I2C("/dev/ttyUSB0", bp.I2C_SPEED_100KHZ)
+        self.i2c = bp.I2C("/dev/ttyUSB0", bp.I2C_SPEED_400KHZ)
         self.i2c.set_fast(1)
         self.hard_reset()
         self.ver = self.read_reg(self.HW_VERSION)
@@ -40,11 +40,10 @@ class AS726x:
         self.set_mode(3)
 
     def read_reg_(self, reg: int):
-        # For fast mode to work we must use separate send and
-        # receive. Blame on Buspirate probably.
-        # r = self.i2c.cmd_recv(self.addr, reg, 1)[0]
-        r = self.i2c.send(self.addr, [reg])
-        r = self.i2c.recv(self.addr, 1)[0]
+        # You need newer Buspirate FW for this to work:
+        r = self.i2c.cmd_recv(self.addr, reg, 1)[0]
+        # r = self.i2c.send(self.addr, [reg])
+        # r = self.i2c.recv(self.addr, 1)[0]
         if self.DEBUG:
             print("RX %d=%d" % (reg, r))
         return r
