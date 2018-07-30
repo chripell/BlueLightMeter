@@ -1,13 +1,16 @@
 #!/usr/bin/python3
 
 import buspirate as bp
+import re
+import serial
 import struct
 import time
 
 
-class AS726x:
+class AS726x_I2C:
 
     ADDR = 0x49
+    SENSORTYPE_AS7261 = 0x3D
     SENSORTYPE_AS7262 = 0x3E
     SENSORTYPE_AS7263 = 0x3F
     DEVICE_TYPE = 0x00
@@ -23,9 +26,9 @@ class AS726x:
     RX_VALID = 0x01
     DEBUG = False
 
-    def __init__(self, gain: int):
+    def __init__(self, port: str):
         self.addr = self.ADDR
-        self.i2c = bp.I2C("/dev/ttyUSB0", bp.I2C_SPEED_400KHZ)
+        self.i2c = bp.I2C(port, bp.I2C_SPEED_400KHZ)
         self.i2c.set_fast(1)
         self.hard_reset()
         self.ver = self.read_reg(self.HW_VERSION)
@@ -36,7 +39,7 @@ class AS726x:
         self.set_bulb(0)
         self.set_indicator_current(0b11)
         self.set_indicator(0)
-        self.set_gain(gain)
+        self.set_gain(3)
         self.set_mode(3)
 
     def read_reg_(self, reg: int):
@@ -77,6 +80,10 @@ class AS726x:
             status = self.read_reg_(self.STATUS_REG)
         self.write_reg_(self.WRITE_REG, val)
 
+    # 0: 12.5mA
+    # 1: 25mA
+    # 2: 50mA
+    # 3: 100mA
     def set_bulb_current(self, current: int):
         if current > 0b11:
             current = 0b11
@@ -85,10 +92,6 @@ class AS726x:
         value |= (current << 4)
         self.write_reg(self.LED_CONTROL, value)
 
-    # 0: 12.5mA
-    # 1: 25mA
-    # 2: 50mA
-    # 3: 100mA
     def set_bulb(self, val: int):
         value = self.read_reg(self.LED_CONTROL)
         value &= ~(1 << 3)
@@ -129,6 +132,9 @@ class AS726x:
     # Time will be 2.8ms * [integration value]
     def set_integration(self, val: int):
         self.write_reg(self.INT_T, val)
+
+    def set_integration_ms(self, val: float):
+        self.set_integration(int(val / 2.8))
 
     def measure(self):
         self.clear_data()
@@ -194,9 +200,118 @@ class AS726x:
             self.get_calibrated(0x24),
             self.get_calibrated(0x28)]
 
+class AS726x_SERIAL:
 
-as726x = AS726x(3)
+    DEBUG = False
+    FLOAT = r"[-+]?\d*\.\d+|\d+"
+
+    def __init__(self, port: str):
+        self.ser = serial.Serial(port, 115200, timeout=1)
+        self.chat("AT", "OK")
+        self.chat("ATTCSMD=2", "OK")
+        self.set_interval(255)
+
+    def chat(self, tx: str, match: str):
+        if tx is not None:
+            tx += "\n"
+            self.ser.write(tx.encode("utf-8"))
+        rx = self.ser.read_until()
+        rx = rx.decode("utf-8")
+        m = re.match(match, rx)
+        if m is None:
+            raise IOError("Unexpected answer: %s" % rx)
+        return m
+
+    def measure(self):
+        # If you enable double read, ser_interval to 1!
+        # self.chat("ATBURST=2", "OK")
+        # self.chat(None, r"(\d+), (\d+), (\d+), (\d+), (\d+), (\d+)")
+        # r = self.chat(None, r"(\d+), (\d+), (\d+), (\d+), (\d+), (\d+)")
+        self.chat("ATBURST=1", "OK")
+        r = self.chat(None, r"(\d+), (\d+), (\d+), (\d+), (\d+), (\d+)")
+        self.chat("ATBURST=0", ".*OK")
+        return [int(r[i]) for i in range(1, 7)]
+
+    # 0: 12.5mA
+    # 1: 25mA
+    # 2: 50mA
+    # 3: 100mA
+    def set_bulb_current(self, current: int):
+        if current > 0b11:
+            current = 0b11
+        v = int(self.chat("ATLEDC", r"\d+OK")[1])
+        v &= ~(3 << 4)
+        v |= (current << 4)
+        self.chat("ATLEDC=%d" % v, "OK")
+
+    def set_bulb(self, val: int):
+        if val != 0:
+            val = 100
+        self.chat("ATLED0=%d" % val, "OK")
+
+    # Max 8mA = 0b11
+    def set_indicator_current(self, current: int):
+        if current > 0b11:
+            current = 0b11
+        v = int(self.chat("ATLEDC", r"\d+OK")[1])
+        v &= ~(3 << 0)
+        v |= (current << 0)
+        self.chat("ATLEDC=%d" % v, "OK")
+
+    # Gain 0: 1x (power-on default)
+    # Gain 1: 3.7x
+    # Gain 2: 16x
+    # Gain 3: 64x
+    def set_gain(self, gain: int):
+        if gain > 0b11:
+            gain = 0b11
+        self.chat("ATGAIN=%d" % gain, "OK")
+
+    # Give this function a byte from 0 to 255.
+    # Time will be 2.8ms * [integration value]
+    def set_integration(self, val: int):
+        self.chat("ATINTTIME=%d" % val, "OK")
+
+    def set_integration_ms(self, val: float):
+        self.set_integration(int(val / 2.8))
+
+    def set_interval(self, val: int):
+        self.chat("ATINTRVL=%d" % val, "OK")
+
+    def soft_reset(self):
+        self.chat("ATSRST", "OK")
+
+    def get_temperature(self):
+        return float(self.chat("ATTEMP", self.FLOAT + "OK")[1])
+
+    def get_XYZ(self):
+        r = self.chat("ATXYZC", ", ".join((self.FLOAT,) * 3) + "OK")
+        return [float(r[i]) for i in range(1, 4)]
+
+    def get_lux(self):
+        return float(self.chat("ATLUXC", self.FLOAT + "OK")[1])
+
+    def get_cct(self):
+        return float(self.chat("ATCCTC", self.FLOAT + "OK")[1])
+
+    def get_xy(self):
+        r = self.chat("ATSMALLXYC", ", ".join((self.FLOAT,) * 2) + "OK")
+        return [float(r[i]) for i in range(1, 3)]
+
+    def get_uv(self):
+        r = self.chat("ATUVPRIMEC", ", ".join((self.FLOAT,) * 4) + "OK")
+        return [float(r[i]) for i in range(1, 5)]
+
+    def get_duv(self):
+        return float(self.chat("ATDUVC", self.FLOAT + "OK")[1])
+
+    def get_cdata(self):
+        r = self.chat("ATCDATA", ", ".join((self.FLOAT,) * 6) + "OK")
+        return [float(r[i]) for i in range(1, 7)]
+
+
+as726x = AS726x_SERIAL("/dev/ttyUSB0")
 # as726x.set_bulb(1)
-as726x.measure()
-print(as726x.get_all_values())
+print(as726x.measure())
+# print(as726x.get_all_values())
 # as726x.set_bulb(0)
