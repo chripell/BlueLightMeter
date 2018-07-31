@@ -200,10 +200,11 @@ class AS726x_I2C:
             self.get_calibrated(0x24),
             self.get_calibrated(0x28)]
 
+
 class AS726x_SERIAL:
 
-    DEBUG = False
-    FLOAT = r"[-+]?\d*\.\d+|\d+"
+    DEBUG = True
+    FLOAT = r" *([-+]?\d*\.\d+|\d+)"
 
     def __init__(self, port: str):
         self.ser = serial.Serial(port, 115200, timeout=1)
@@ -213,12 +214,18 @@ class AS726x_SERIAL:
 
     def chat(self, tx: str, match: str):
         if tx is not None:
+            if self.DEBUG:
+                print("TX:", tx)
             tx += "\n"
             self.ser.write(tx.encode("utf-8"))
         rx = self.ser.read_until()
         rx = rx.decode("utf-8")
+        if self.DEBUG:
+            print("RX:", rx, end='')
         m = re.match(match, rx)
         if m is None:
+            if re.match(r".*OK", rx):
+                return None
             raise IOError("Unexpected answer: %s" % rx)
         return m
 
@@ -282,36 +289,62 @@ class AS726x_SERIAL:
         self.chat("ATSRST", "OK")
 
     def get_temperature(self):
-        return float(self.chat("ATTEMP", self.FLOAT + "OK")[1])
+        return float(self.chat("ATTEMP", self.FLOAT + " OK")[1])
 
     def get_XYZ(self):
-        r = self.chat("ATXYZC", ", ".join((self.FLOAT,) * 3) + "OK")
+        r = self.chat("ATXYZC", ", ".join((self.FLOAT,) * 3) + " OK")
+        if r is None:
+            return None
         return [float(r[i]) for i in range(1, 4)]
 
     def get_lux(self):
-        return float(self.chat("ATLUXC", self.FLOAT + "OK")[1])
+        r = self.chat("ATLUXC", self.FLOAT + " OK")
+        if r is None:
+            return None
+        return float(r[1])
 
     def get_cct(self):
-        return float(self.chat("ATCCTC", self.FLOAT + "OK")[1])
+        r = self.chat("ATCCTC", self.FLOAT + " OK")
+        if r is None:
+            return None
+        return float(r[1])
 
     def get_xy(self):
-        r = self.chat("ATSMALLXYC", ", ".join((self.FLOAT,) * 2) + "OK")
+        r = self.chat("ATSMALLXYC", ", ".join((self.FLOAT,) * 2) + " OK")
+        if r is None:
+            return None
         return [float(r[i]) for i in range(1, 3)]
 
     def get_uv(self):
-        r = self.chat("ATUVPRIMEC", ", ".join((self.FLOAT,) * 4) + "OK")
+        r = self.chat("ATUVPRIMEC", ", ".join((self.FLOAT,) * 4) + " OK")
+        if r is None:
+            return None
         return [float(r[i]) for i in range(1, 5)]
 
     def get_duv(self):
-        return float(self.chat("ATDUVC", self.FLOAT + "OK")[1])
+        r = self.chat("ATDUVC", self.FLOAT + " OK")
+        if r is None:
+            return None
+        return float(r[1])
 
-    def get_cdata(self):
-        r = self.chat("ATCDATA", ", ".join((self.FLOAT,) * 6) + "OK")
+    def get_all_values(self):
+        r = self.chat("ATCDATA", ", ".join((self.FLOAT,) * 6) + " OK")
+        if r is None:
+            return None
         return [float(r[i]) for i in range(1, 7)]
 
 
 as726x = AS726x_SERIAL("/dev/ttyUSB0")
-# as726x.set_bulb(1)
+as726x.set_bulb(1)
+as726x.set_gain(3)
+as726x.set_integration_ms(100)
 print(as726x.measure())
+print(as726x.get_temperature())
+print(as726x.get_XYZ())
+print(as726x.get_lux())
+print(as726x.get_cct())
+print(as726x.get_xy())
+print(as726x.get_uv())
+print(as726x.get_duv())
 # print(as726x.get_all_values())
-# as726x.set_bulb(0)
+as726x.set_bulb(0)
