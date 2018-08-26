@@ -205,12 +205,28 @@ class AS726x_SERIAL:
 
     DEBUG = True
     FLOAT = r" *([-+]?\d*\.\d+|\d+)"
+    HEX = r"([0-9A-F][0-9A-F])"
+    HEXD = r"[0-9A-F][0-9A-F]"
+    AS7261 = 0x3D
+    AS7262 = 0x3E
+    AS7263 = 0x3F
+
+    # ATVERHW
+    # AS7262 -> 403Ex OK
 
     def __init__(self, port: str):
         self.ser = serial.Serial(port, 115200, timeout=1)
         self.chat("AT", "OK")
+        ver = self.chat(
+            "ATVERHW",
+            self.HEXD + self.HEX + "x OK")[1]
+        self.ver = int(ver, 16)
         self.chat("ATTCSMD=2", "OK")
-        self.set_interval(255)
+        if self.ver == self.AS7261:
+            self.set_interval(255)
+
+    def get_version(self):
+        return self.ver
 
     def chat(self, tx: str, match: str):
         if tx is not None:
@@ -246,12 +262,17 @@ class AS726x_SERIAL:
     def set_bulb_current(self, current: int):
         if current > 0b11:
             current = 0b11
-        v = int(self.chat("ATLEDC", r"\d+OK")[1])
+        v = int(self.chat("ATLEDC", self.HEX + "x OK")[1], 16)
         v &= ~(3 << 4)
         v |= (current << 4)
         self.chat("ATLEDC=%d" % v, "OK")
 
     def set_bulb(self, val: int):
+        if val != 0:
+            val = 100
+        self.chat("ATLED1=%d" % val, "OK")
+
+    def set_indicator(self, val: int):
         if val != 0:
             val = 100
         self.chat("ATLED0=%d" % val, "OK")
@@ -260,7 +281,7 @@ class AS726x_SERIAL:
     def set_indicator_current(self, current: int):
         if current > 0b11:
             current = 0b11
-        v = int(self.chat("ATLEDC", r"\d+OK")[1])
+        v = int(self.chat("ATLEDC", self.HEX + "x OK")[1], 16)
         v &= ~(3 << 0)
         v |= (current << 0)
         self.chat("ATLEDC=%d" % v, "OK")
@@ -335,16 +356,22 @@ class AS726x_SERIAL:
 
 
 as726x = AS726x_SERIAL("/dev/ttyUSB0")
+as726x.set_bulb_current(0)
+as726x.set_indicator_current(0)
 as726x.set_bulb(1)
+as726x.set_indicator(1)
 as726x.set_gain(3)
 as726x.set_integration_ms(100)
 print(as726x.measure())
 print(as726x.get_temperature())
-print(as726x.get_XYZ())
-print(as726x.get_lux())
-print(as726x.get_cct())
-print(as726x.get_xy())
-print(as726x.get_uv())
-print(as726x.get_duv())
-# print(as726x.get_all_values())
+if as726x.get_version() == as726x.AS7261:
+    print(as726x.get_XYZ())
+    print(as726x.get_lux())
+    print(as726x.get_cct())
+    print(as726x.get_xy())
+    print(as726x.get_uv())
+    print(as726x.get_duv())
+else:
+    print(as726x.get_all_values())
 as726x.set_bulb(0)
+as726x.set_indicator(0)
